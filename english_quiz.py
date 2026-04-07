@@ -15,6 +15,77 @@ st.set_page_config(
     layout="centered"
 )
 
+# ── Professional Styles ─────────────────────────────────────
+
+st.markdown("""
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+html, body, [class*="css"]  {
+font-family: 'Inter', sans-serif;
+}
+
+.stApp {
+background: linear-gradient(180deg, #0B0F1A 0%, #111827 100%);
+color:white;
+}
+
+.title {
+font-size: 42px;
+font-weight: 700;
+margin-bottom: 5px;
+background: linear-gradient(90deg,#4F46E5,#22C55E);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+color:#9CA3AF;
+margin-bottom:20px;
+}
+
+.card {
+background: rgba(17,24,39,0.7);
+backdrop-filter: blur(10px);
+border:1px solid rgba(255,255,255,0.05);
+padding:30px;
+border-radius:18px;
+margin-top:20px;
+}
+
+.stButton>button {
+background: linear-gradient(90deg,#4F46E5,#6366F1);
+color:white;
+border:none;
+border-radius:10px;
+padding:12px 20px;
+font-weight:600;
+transition:0.3s;
+}
+
+.stButton>button:hover {
+transform: translateY(-2px);
+box-shadow:0px 8px 20px rgba(99,102,241,0.4);
+}
+
+.stTextInput>div>div>input {
+background:#111827;
+border:1px solid #374151;
+border-radius:10px;
+color:white;
+}
+
+[data-testid="metric-container"] {
+background:#111827;
+border:1px solid #1F2937;
+padding:15px;
+border-radius:12px;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 # ── Gemini API ──────────────────────────────────────────────
 
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -58,31 +129,6 @@ def get_leaderboard():
     data = sheet.get_all_records()
 
     return pd.DataFrame(data)
-
-# ── Professional Styles ─────────────────────────────────────
-
-st.markdown("""
-<style>
-
-.stApp {
-background: #0f0f14;
-}
-
-.title {
-font-size:40px;
-font-weight:700;
-}
-
-.card {
-background:#18181f;
-padding:25px;
-border-radius:14px;
-border:1px solid #2a2a38;
-margin-bottom:20px;
-}
-
-</style>
-""", unsafe_allow_html=True)
 
 # ── Question Bank ───────────────────────────────────────────
 
@@ -160,24 +206,28 @@ def init_quiz(name):
 
 def page_landing():
 
-    st.markdown("<div class='title'>🇬🇧 GB English Quiz</div>", unsafe_allow_html=True)
-    st.markdown("25 questions • Grammar • A1 Level")
-    st.markdown("---")
+    st.markdown("<div class='title'>GB English Quiz</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='subtitle'>25 Questions • Grammar • A1 Level</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
 
     name = st.text_input("Your name")
 
     col1,col2 = st.columns(2)
 
     with col1:
-        if st.button("Start", use_container_width=True):
+        if st.button("🚀 Start", use_container_width=True):
             if name:
                 init_quiz(name)
                 st.rerun()
 
     with col2:
-        if st.button("Leaderboard", use_container_width=True):
+        if st.button("🏆 Leaderboard", use_container_width=True):
             st.session_state.phase="leaderboard"
             st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ── Quiz ───────────────────────────────────────────────────
 
