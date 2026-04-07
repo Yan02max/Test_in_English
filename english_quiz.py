@@ -12,54 +12,71 @@ import time
 
 st.set_page_config(
     page_title="GB English Quiz",
-    page_icon="🇬🇧",
+    page_icon="📘",
     layout="centered"
 )
 
-# ── Animated Background + Style ─────────────────────
+# ── Styles + Animations ─────────────────────────────
 
 st.markdown("""
 <style>
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
-html, body, [class*="css"]  {
+html, body {
 font-family: 'Inter', sans-serif;
 }
 
 .stApp {
-background: linear-gradient(-45deg, #0f172a, #020617, #020617, #020617);
+background: linear-gradient(-45deg, #020617, #020617, #0f172a, #020617);
 background-size: 400% 400%;
-animation: gradient 15s ease infinite;
+animation: gradient 12s ease infinite;
 }
 
 @keyframes gradient {
-0% {background-position: 0% 50%;}
-50% {background-position: 100% 50%;}
-100% {background-position: 0% 50%;}
+0% {background-position:0% 50%;}
+50% {background-position:100% 50%;}
+100% {background-position:0% 50%;}
 }
 
-.title {
-font-size: 42px;
-font-weight: 700;
-background: linear-gradient(90deg,#6366f1,#22c55e);
--webkit-background-clip: text;
--webkit-text-fill-color: transparent;
+/* Book animation */
+
+.book {
+width:120px;
+height:90px;
+background:#6366f1;
+border-radius:6px;
+margin:auto;
+animation: float 3s ease-in-out infinite;
+}
+
+.book:before {
+content:"";
+position:absolute;
+width:50%;
+height:90px;
+background:#4f46e5;
+right:0;
+border-left:2px solid white;
+}
+
+@keyframes float {
+0% {transform: translateY(0px);}
+50% {transform: translateY(-10px);}
+100% {transform: translateY(0px);}
 }
 
 .card {
 background: rgba(17,24,39,0.7);
-backdrop-filter: blur(10px);
-padding: 25px;
-border-radius: 15px;
-border: 1px solid rgba(255,255,255,0.05);
-margin-top: 20px;
+padding:25px;
+border-radius:15px;
+margin-top:20px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# ── Sound effects ───────────────────────────────────
+# ── Sounds ─────────────────────────────────────────
 
 correct_sound = """
 <audio autoplay>
@@ -73,11 +90,11 @@ wrong_sound = """
 </audio>
 """
 
-# ── Gemini API ──────────────────────────────────────
+# ── Gemini ─────────────────────────────────────────
 
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-# ── Google Sheets ───────────────────────────────────
+# ── Google Sheets ──────────────────────────────────
 
 @st.cache_resource
 def connect_sheet():
@@ -95,14 +112,15 @@ def connect_sheet():
     return client.open("English Quiz Leaderboard").sheet1
 
 
-def save_score(name, score, total, pct):
+def save_score(name,score,total,pct,level):
 
     connect_sheet().append_row([
         name,
         score,
         total,
         pct,
-        datetime.now().strftime("%Y-%m-%d %H:%M")
+        level,
+        datetime.now().strftime("%Y-%m-%d")
     ])
 
 
@@ -112,50 +130,24 @@ def get_leaderboard():
 
     return pd.DataFrame(data)
 
-# ── Question Bank ───────────────────────────────────
+# ── Question bank ─────────────────────────────────
 
 FIXED_BANK = [
+{"text":"She ___ to school every day.","options":["go","goes","is go","going"],"correct":1,"explanation":"She is third person singular"},
+{"text":"I ___ hungry.","options":["is","are","am","be"],"correct":2,"explanation":"I use am"},
+{"text":"They ___ soccer.","options":["play","plays","playing","played"],"correct":0,"explanation":"Plural subject"},
+{"text":"He ___ tired.","options":["is","are","be","am"],"correct":0,"explanation":"He uses is"},
+{"text":"We ___ ready.","options":["is","are","be","am"],"correct":1,"explanation":"Plural subject"}
+]*10
 
-{"text":"She ___ to school every day.","options":["go","goes","is go","going"],"correct":1},
-{"text":"I ___ hungry.","options":["is","are","am","be"],"correct":2},
-{"text":"They ___ soccer.","options":["play","plays","playing","played"],"correct":0},
-{"text":"He ___ tired.","options":["is","are","be","am"],"correct":0},
-{"text":"We ___ ready.","options":["is","are","be","am"],"correct":1},
-
-{"text":"I ___ yesterday.","options":["go","went","gone","going"],"correct":1},
-{"text":"She ___ English.","options":["study","studies","studied","studying"],"correct":1},
-{"text":"They ___ dinner.","options":["eat","ate","eaten","eating"],"correct":1},
-{"text":"He ___ tall.","options":["is","are","be","am"],"correct":0},
-{"text":"We ___ friends.","options":["is","are","be","am"],"correct":1},
-
-{"text":"She ___ fast.","options":["run","runs","ran","running"],"correct":1},
-{"text":"He ___ pizza.","options":["like","likes","liked","liking"],"correct":1},
-{"text":"We ___ early.","options":["arrive","arrives","arrived","arriving"],"correct":0},
-
-{"text":"They ___ happy.","options":["is","are","be","am"],"correct":1},
-{"text":"I ___ coffee.","options":["like","likes","liked","liking"],"correct":0},
-
-{"text":"He ___ soccer.","options":["play","plays","playing","played"],"correct":1},
-{"text":"We ___ late.","options":["is","are","be","am"],"correct":1},
-{"text":"She ___ tired.","options":["is","are","be","am"],"correct":0},
-{"text":"They ___ here.","options":["is","are","be","am"],"correct":1},
-{"text":"I ___ ready.","options":["is","are","am","be"],"correct":2}
-
-]
-
-# ── AI Questions ───────────────────────────────────
+# ── AI questions ─────────────────────────────────
 
 def generate_ai_questions(n=5):
 
     model = genai.GenerativeModel("gemini-1.5-flash")
 
     prompt = f"""
-Generate {n} A1 English grammar questions.
-
-Return JSON:
-[
-{{"text":"","options":["","","",""],"correct":0}}
-]
+Generate {n} A1 English questions JSON
 """
 
     try:
@@ -164,7 +156,7 @@ Return JSON:
     except:
         return []
 
-# ── Build Quiz ─────────────────────────────────────
+# ── Build quiz ─────────────────────────────────
 
 def build_quiz():
 
@@ -177,45 +169,40 @@ def build_quiz():
 
     return pool
 
-# ── Init ───────────────────────────────────────────
+# ── Init ─────────────────────────────────
 
-def init_quiz(name):
+def init_quiz(name,level):
 
-    st.session_state.player = name
-    st.session_state.questions = build_quiz()
-    st.session_state.current = 0
-    st.session_state.score = 0
-    st.session_state.timer = 15
-    st.session_state.phase = "quiz"
+    st.session_state.player=name
+    st.session_state.level=level
+    st.session_state.questions=build_quiz()
+    st.session_state.current=0
+    st.session_state.score=0
+    st.session_state.phase="quiz"
 
-# ── Landing ────────────────────────────────────────
+# ── Landing ─────────────────────────────
 
 def page_landing():
 
-    st.markdown("<div class='title'>GB English Quiz</div>", unsafe_allow_html=True)
+    st.markdown("<div class='book'></div>",unsafe_allow_html=True)
 
-    st.markdown("25 Questions • Grammar • A1")
+    st.title("GB English Quiz")
 
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    level = st.selectbox("Level",["A1","A2","B1"])
 
     name = st.text_input("Your name")
 
-    col1,col2 = st.columns(2)
+    if st.button("Start"):
 
-    with col1:
-        if st.button("Start", use_container_width=True):
-            if name:
-                init_quiz(name)
-                st.rerun()
-
-    with col2:
-        if st.button("Leaderboard", use_container_width=True):
-            st.session_state.phase="leaderboard"
+        if name:
+            init_quiz(name,level)
             st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    if st.button("Leaderboard"):
+        st.session_state.phase="leaderboard"
+        st.rerun()
 
-# ── Quiz ───────────────────────────────────────────
+# ── Quiz ─────────────────────────────
 
 def page_quiz():
 
@@ -227,87 +214,94 @@ def page_quiz():
 
     st.progress((idx+1)/total)
 
-    st.metric("Score", st.session_state.score)
+    st.metric("Score",st.session_state.score)
 
-    # Timer
+    timer=st.empty()
 
-    timer = st.empty()
+    for i in range(10,0,-1):
 
-    for i in range(15,0,-1):
-        timer.metric("Time", i)
+        timer.metric("Time",i)
+
         time.sleep(1)
 
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
+    st.markdown("<div class='card'>",unsafe_allow_html=True)
 
-    st.markdown(f"### {q['text']}")
+    st.write(q["text"])
 
     for i,opt in enumerate(q["options"]):
 
         if st.button(opt):
 
-            if i == q["correct"]:
-                st.markdown(correct_sound, unsafe_allow_html=True)
-                st.session_state.score += 1
+            if i==q["correct"]:
+                st.markdown(correct_sound,unsafe_allow_html=True)
+                st.success("Correct")
+                st.info(q["explanation"])
+                st.session_state.score+=1
+
             else:
-                st.markdown(wrong_sound, unsafe_allow_html=True)
+                st.markdown(wrong_sound,unsafe_allow_html=True)
+                st.error("Incorrect")
+                st.info(q["explanation"])
 
-            st.session_state.current += 1
+            st.session_state.current+=1
 
-            if st.session_state.current >= total:
+            if st.session_state.current>=total:
 
-                pct = round(st.session_state.score/total*100)
+                pct=round(
+                    st.session_state.score/total*100
+                )
 
                 save_score(
                     st.session_state.player,
                     st.session_state.score,
                     total,
-                    pct
+                    pct,
+                    st.session_state.level
                 )
 
                 st.session_state.phase="results"
 
             st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# ── Results ─────────────────────────────────────────
+# ── Results ─────────────────────────────
 
 def page_results():
 
-    score = st.session_state.score
-    total = len(st.session_state.questions)
+    score=st.session_state.score
 
-    pct = round(score/total*100)
+    total=len(st.session_state.questions)
 
-    st.title("Your Result")
+    pct=round(score/total*100)
+
+    st.title("Results")
 
     st.progress(pct/100)
 
-    st.metric("Score", f"{score}/{total}")
+    st.metric("Score",f"{score}/{total}")
 
     if st.button("Play Again"):
         st.session_state.phase="landing"
         st.rerun()
 
-# ── Leaderboard ─────────────────────────────────────
+# ── Leaderboard ─────────────────────────
 
 def page_leaderboard():
 
     st.title("🏆 Top 10")
 
-    df = get_leaderboard()
+    df=get_leaderboard()
 
     if not df.empty:
 
-        df = df.sort_values("Percent",ascending=False)
+        df=df.sort_values("Percent",ascending=False)
 
-        st.dataframe(df.head(10),use_container_width=True)
+        st.dataframe(df.head(10))
 
     if st.button("Back"):
         st.session_state.phase="landing"
         st.rerun()
 
-# ── Router ─────────────────────────────────────────
+# ── Router ─────────────────────────
 
 if "phase" not in st.session_state:
     st.session_state.phase="landing"
